@@ -1,0 +1,316 @@
+{
+  "metadata": {
+    "title": "Cisplatin Comprehensive Discovery & Evolutionary Lineage (t=0 -> t=40)",
+    "description": "初期の電極腐食失敗データや分光・毒性測定を経て、最新のナノキャリア送達論文に至る多層的プロバナンス実証データセット"
+  },
+  "snapshots": [
+    {
+      "version": 0,
+      "description": "t=0 [1965年] 初期実験: 大腸菌への電場印加実験と電極腐食失敗・先行文献",
+      "@graph": [
+        {
+          "@id": "Nature_1965_Rosenberg",
+          "cat:type": "Paper",
+          "schema:name": "Inhibition of Cell Division in E. coli by Electrolysis (Nature 1965)",
+          "schema:datePublished": "1965",
+          "schema:hasPart": [
+            {
+              "@id": "Data_CellFilamentation"
+            },
+            {
+              "@id": "Data_ElectricFieldGradient"
+            },
+            {
+              "@id": "Material_EColi_B"
+            },
+            {
+              "@id": "Exp_Fail_ElectrodeCorrosion"
+            },
+            {
+              "@id": "Exp_Fail_LowPHPrecipitate"
+            }
+          ],
+          "schema:citation": [
+            {
+              "@id": "Ref_Smith_1958"
+            },
+            {
+              "@id": "Ref_Phillips_1960"
+            }
+          ]
+        },
+        {
+          "@id": "Data_CellFilamentation",
+          "cat:type": "Data",
+          "schema:name": "E. coli Filamentation Assay (300x elongation)",
+          "sio:has-value": "300x length without division"
+        },
+        {
+          "@id": "Data_ElectricFieldGradient",
+          "cat:type": "Data",
+          "schema:name": "Electric Field Voltage-Current Response (50-200 V/cm)",
+          "sio:has-value": "120 V/cm continuous"
+        },
+        {
+          "@id": "Material_EColi_B",
+          "cat:type": "Material",
+          "schema:name": "E. coli Strain B Culture Lot #01 (NH4Cl medium)"
+        },
+        {
+          "@id": "Exp_Fail_ElectrodeCorrosion",
+          "cat:type": "FailedData",
+          "schema:name": "Unexpected Pt Electrode Corrosion (Unknown Contaminant)",
+          "cat:failureReason": "Inert Pt electrode corroded in NH4Cl broth; formed soluble inorganic byproduct"
+        },
+        {
+          "@id": "Exp_Fail_LowPHPrecipitate",
+          "cat:type": "FailedData",
+          "schema:name": "Low pH Decomposition Precipitate Log",
+          "cat:failureReason": "Substance hydrolyzed and formed inactive black precipitate under acidic pH < 4.5"
+        },
+        {
+          "@id": "Ref_Smith_1958",
+          "cat:type": "Reference",
+          "schema:name": "Smith et al. (1958) Physical Effects of Direct Currents on Bacteria"
+        },
+        {
+          "@id": "Ref_Phillips_1960",
+          "cat:type": "Reference",
+          "schema:name": "Phillips (1960) Coordination Chemistry of Platinum Group Metals"
+        }
+      ]
+    },
+    {
+      "version": 10,
+      "description": "t=10 [1967年] 観点転換・異種分析・新材料投入: 失敗ログの再解釈とシスプラチン合成",
+      "perspective_shifts": [
+        {
+          "source_id": "Exp_Fail_ElectrodeCorrosion",
+          "new_id": "LimitEntry_PtCytotoxicity",
+          "new_type": "ThermalLimit",
+          "name": "Pt Complex Cell-Division Arrest Activity (IC50 = 2.5 ug/mL)",
+          "note": "Re-evaluated corrosion byproduct as potent chemical inhibitor of chromosomal division"
+        },
+        {
+          "source_id": "Exp_Fail_LowPHPrecipitate",
+          "new_id": "LimitEntry_HydrolysisKinetics",
+          "new_type": "ThermalLimit",
+          "name": "Aqueous Hydrolysis Rate & pH Stability Boundary",
+          "note": "Re-evaluated acid precipitate as aqueous activation kinetics (chloro-to-aqua exchange)"
+        }
+      ],
+      "@graph": [
+        {
+          "@id": "Data_Spectroscopy_NMR_IR",
+          "cat:type": "Data",
+          "schema:name": "IR & NMR Spectroscopy Coordination Structural Data",
+          "sio:has-value": "Cis-geometry identified (cis-Pt(NH3)2Cl2)"
+        },
+        {
+          "@id": "Material_Synthesized_Cisplatin",
+          "cat:type": "NewMaterial",
+          "schema:name": "cis-diamminedichloroplatinum(II) [Pure Synthetic Specimen]",
+          "schema:description": "Purely synthesized cis-isomer according to reinterpreted coordination chemistry"
+        }
+      ],
+      "higher_functors": [
+        {
+          "from": "Data_CellFilamentation@t0",
+          "to": "Data_CellFilamentation@t10",
+          "transform": "Preserve",
+          "functor": "KanExtension_Sigma"
+        },
+        {
+          "from": "Material_EColi_B@t0",
+          "to": "Material_EColi_B@t10",
+          "transform": "Preserve",
+          "functor": "KanExtension_Sigma"
+        },
+        {
+          "from": "Ref_Phillips_1960@t0",
+          "to": "Data_Spectroscopy_NMR_IR@t10",
+          "transform": "GuidedByTheory",
+          "functor": "ColimitProjection"
+        }
+      ]
+    },
+    {
+      "version": 20,
+      "description": "t=20 [1969-1972年] 動物抗腫瘍試験・毒性限界・Nature 1969 論文結実",
+      "@graph": [
+        {
+          "@id": "Nature_1969_Rosenberg",
+          "cat:type": "NewPaper",
+          "schema:name": "Platinum Compounds: a New Class of Potent Antitumour Agents (Nature 1969)",
+          "schema:datePublished": "1969",
+          "schema:hasPart": [
+            {
+              "@id": "Data_Sarcoma180_TumorRegression"
+            },
+            {
+              "@id": "LimitEntry_NephrotoxicityThreshold"
+            },
+            {
+              "@id": "Material_Synthesized_Cisplatin"
+            }
+          ],
+          "prov:wasDerivedFrom": [
+            {
+              "@id": "Nature_1965_Rosenberg"
+            }
+          ]
+        },
+        {
+          "@id": "Data_Sarcoma180_TumorRegression",
+          "cat:type": "Data",
+          "schema:name": "In Vivo Sarcoma 180 Complete Tumor Regression Curve",
+          "sio:has-value": "100% cure rate at 8 mg/kg"
+        },
+        {
+          "@id": "LimitEntry_NephrotoxicityThreshold",
+          "cat:type": "ThermalLimit",
+          "schema:name": "Nephrotoxicity Dose Boundary (BUN/Creatinine Threshold)",
+          "sio:has-value": "Max tolerable single dose 12 mg/kg"
+        }
+      ],
+      "higher_functors": [
+        {
+          "from": "LimitEntry_PtCytotoxicity@t10",
+          "to": "Nature_1969_Rosenberg@t20",
+          "transform": "Synthesize",
+          "functor": "ColimitProjection"
+        },
+        {
+          "from": "LimitEntry_HydrolysisKinetics@t10",
+          "to": "LimitEntry_NephrotoxicityThreshold@t20",
+          "transform": "MechanisticProgression",
+          "functor": "Adjunction"
+        },
+        {
+          "from": "Material_Synthesized_Cisplatin@t10",
+          "to": "Nature_1969_Rosenberg@t20",
+          "transform": "IntegrateNew",
+          "functor": "Pushout"
+        },
+        {
+          "from": "Data_CellFilamentation@t10",
+          "to": "Data_Sarcoma180_TumorRegression@t20",
+          "transform": "TranslateCellToAnimal",
+          "functor": "KanExtension"
+        },
+        {
+          "from": "Nature_1965_Rosenberg@t0",
+          "to": "Nature_1969_Rosenberg@t20",
+          "transform": "EvolvesFrom",
+          "functor": "Lineage"
+        }
+      ]
+    },
+    {
+      "version": 30,
+      "description": "t=30 [1999年] X線結晶構造解析によるDNA付加体分子機序解明論文",
+      "@graph": [
+        {
+          "@id": "Nature_1999_Lippard",
+          "cat:type": "NewPaper",
+          "schema:name": "Crystal Structure of Major DNA Adduct of Cisplatin (Nature 1999)",
+          "schema:datePublished": "1999",
+          "schema:hasPart": [
+            {
+              "@id": "Data_XrayCrystallography_PDB"
+            },
+            {
+              "@id": "Material_DuplexDNA_Adduct"
+            }
+          ],
+          "prov:wasDerivedFrom": [
+            {
+              "@id": "Nature_1969_Rosenberg"
+            }
+          ]
+        },
+        {
+          "@id": "Data_XrayCrystallography_PDB",
+          "cat:type": "Data",
+          "schema:name": "1.9A X-ray Crystallography Coordinate Dataset (PDB: 1AIO)",
+          "sio:has-value": "45-degree DNA bending angle"
+        },
+        {
+          "@id": "Material_DuplexDNA_Adduct",
+          "cat:type": "Material",
+          "schema:name": "Self-complementary 16-base-pair Duplex DNA Complex"
+        }
+      ],
+      "higher_functors": [
+        {
+          "from": "Nature_1969_Rosenberg@t20",
+          "to": "Nature_1999_Lippard@t30",
+          "transform": "StructuralElucidation",
+          "functor": "HigherAdjunction"
+        },
+        {
+          "from": "Material_Synthesized_Cisplatin@t10",
+          "to": "Material_DuplexDNA_Adduct@t30",
+          "transform": "ComplexFormation",
+          "functor": "Pushout"
+        }
+      ]
+    },
+    {
+      "version": 40,
+      "description": "t=40 [2026年 最新論文] 白金ナノキャリア標的送達・耐性克服論文 (最先端の到達点)",
+      "@graph": [
+        {
+          "@id": "Paper_2026_AdvancedTherapeutics",
+          "cat:type": "NewPaper",
+          "schema:name": "Targeted Pt(IV) Polymer Nanocarriers Overcoming Multi-Drug Resistance (Adv Ther 2026)",
+          "schema:datePublished": "2026",
+          "schema:hasPart": [
+            {
+              "@id": "Data_NanoparticleTargeting_PK"
+            },
+            {
+              "@id": "Material_PtIV_PEG_Nanoparticle"
+            }
+          ],
+          "prov:wasDerivedFrom": [
+            {
+              "@id": "Nature_1999_Lippard"
+            }
+          ]
+        },
+        {
+          "@id": "Data_NanoparticleTargeting_PK",
+          "cat:type": "Data",
+          "schema:name": "Tumor Accumulation Pharmacokinetics & Zero Renal Toxicity Curve",
+          "sio:has-value": "15x tumor uptake, 0% acute kidney injury"
+        },
+        {
+          "@id": "Material_PtIV_PEG_Nanoparticle",
+          "cat:type": "NewMaterial",
+          "schema:name": "pH-Responsive Pt(IV) Prodrug PEG-PLGA Nanoparticles"
+        }
+      ],
+      "higher_functors": [
+        {
+          "from": "Nature_1999_Lippard@t30",
+          "to": "Paper_2026_AdvancedTherapeutics@t40",
+          "transform": "MechanismInformedDesign",
+          "functor": "HigherAdjunction"
+        },
+        {
+          "from": "Data_XrayCrystallography_PDB@t30",
+          "to": "Paper_2026_AdvancedTherapeutics@t40",
+          "transform": "StructureBasedDrugDesign",
+          "functor": "ColimitProjection"
+        },
+        {
+          "from": "LimitEntry_NephrotoxicityThreshold@t20",
+          "to": "Data_NanoparticleTargeting_PK@t40",
+          "transform": "OvercomingToxicityBoundary",
+          "functor": "PerspectiveShift"
+        }
+      ]
+    }
+  ]
+}

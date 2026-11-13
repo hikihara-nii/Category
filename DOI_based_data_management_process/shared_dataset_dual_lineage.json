@@ -1,0 +1,244 @@
+{
+  "metadata": {
+    "title": "Dual Lineage Sharing a Single Core Dataset (Pushout Structure)",
+    "description": "2つの独立した研究系列（系列A: 生体分子・細胞生物学、系列B: 材料工学・ナノデバイス）が、たまたま1つの共通結晶構造データセット (Data_Shared_CrystalStructure_DOI) を共有して展開しているケース"
+  },
+  "snapshots": [
+    {
+      "version": 0,
+      "description": "t=0 [基底層] 2つの研究室が独立に生み出した初期データと、共通利用される結晶回折生データ",
+      "@graph": [
+        {
+          "@id": "orcid:0000-0001-1111-AAAA",
+          "cat:type": "Researcher",
+          "schema:name": "Dr. Alice (Biophysicist, ORCID: 0000-0001-1111-AAAA)",
+          "@type": "prov:Agent"
+        },
+        {
+          "@id": "orcid:0000-0002-2222-BBBB",
+          "cat:type": "Researcher",
+          "schema:name": "Dr. Bob (Materials Engineer, ORCID: 0000-0002-2222-BBBB)",
+          "@type": "prov:Agent"
+        },
+        {
+          "@id": "Data_Shared_CrystalStructure_DOI",
+          "cat:type": "Data",
+          "schema:name": "High-Res Synchrotron XRD Raw Diffraction Dataset (DOI: 10.5281/zenodo.999111)",
+          "schema:identifier": "https://doi.org/10.5281/zenodo.999111",
+          "datacite:doi": "10.5281/zenodo.999111",
+          "schema:publisher": "Zenodo",
+          "sio:has-value": "1.2Å resolution reciprocal lattice map",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0001-1111-AAAA"
+            }
+          ]
+        },
+        {
+          "@id": "Data_LineageA_CellAssay",
+          "cat:type": "Data",
+          "schema:name": "Lineage A: In Vitro Cell Cytotoxicity Screen (Lab A)",
+          "sio:has-value": "Apoptosis induction 85%",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0001-1111-AAAA"
+            }
+          ]
+        },
+        {
+          "@id": "Exp_Fail_LineageB_SinteringCracks",
+          "cat:type": "FailedData",
+          "schema:name": "Lineage B: Thermal Shock Sintering Crack Log (Lab B)",
+          "cat:failureReason": "Thin film cracked at 450C due to lattice mismatch",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-2222-BBBB"
+            }
+          ]
+        },
+        {
+          "@id": "Paper_LineageA_InitialBioStudy",
+          "cat:type": "Paper",
+          "schema:name": "Lineage A: Cellular Uptake of Coordination Crystals (JBC 2018)",
+          "schema:datePublished": "2018",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0001-1111-AAAA"
+            }
+          ],
+          "schema:hasPart": [
+            {
+              "@id": "Data_Shared_CrystalStructure_DOI"
+            },
+            {
+              "@id": "Data_LineageA_CellAssay"
+            }
+          ]
+        },
+        {
+          "@id": "Paper_LineageB_InitialDeviceStudy",
+          "cat:type": "Paper",
+          "schema:name": "Lineage B: Piezoelectric Response in Polycrystalline Wafers (APL 2018)",
+          "schema:datePublished": "2018",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-2222-BBBB"
+            }
+          ],
+          "schema:hasPart": [
+            {
+              "@id": "Data_Shared_CrystalStructure_DOI"
+            },
+            {
+              "@id": "Exp_Fail_LineageB_SinteringCracks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "version": 10,
+      "description": "t=10 [中間展開層] 系列Aは創薬展開、系列Bは失敗ログの観点転換による熱耐久性限界の獲得",
+      "perspective_shifts": [
+        {
+          "source_id": "Exp_Fail_LineageB_SinteringCracks",
+          "new_id": "LimitEntry_ThermalShockThreshold",
+          "new_type": "ThermalLimit",
+          "name": "Lattice Mismatch Strain & Thermal Breakdown Boundary (450C Limit)"
+        }
+      ],
+      "@graph": [
+        {
+          "@id": "Material_LineageA_LiposomalProdrug",
+          "cat:type": "NewMaterial",
+          "schema:name": "Lineage A: Lipid-Encapsulated Crystal Nanocarrier",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0001-1111-AAAA"
+            }
+          ]
+        },
+        {
+          "@id": "Data_LineageB_DielectricPermittivity",
+          "cat:type": "Data",
+          "schema:name": "Lineage B: High-Temperature Dielectric Permittivity Dataset",
+          "sio:has-value": "k = 85 at 400C",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-2222-BBBB"
+            }
+          ]
+        }
+      ],
+      "higher_functors": [
+        {
+          "from": "Data_Shared_CrystalStructure_DOI@t0",
+          "to": "Data_Shared_CrystalStructure_DOI@t10",
+          "transform": "Preserve",
+          "functor": "KanExtension_Sigma"
+        },
+        {
+          "from": "Paper_LineageA_InitialBioStudy@t0",
+          "to": "Material_LineageA_LiposomalProdrug@t10",
+          "transform": "DrugFormulation",
+          "functor": "Lineage"
+        },
+        {
+          "from": "Exp_Fail_LineageB_SinteringCracks@t0",
+          "to": "LimitEntry_ThermalShockThreshold@t10",
+          "transform": "PerspectiveShift",
+          "functor": "Reinterpretation"
+        }
+      ]
+    },
+    {
+      "version": 20,
+      "description": "t=20 [最終論文層] 系列A・系列Bのそれぞれ別々のトップジャーナル論文へ結実",
+      "@graph": [
+        {
+          "@id": "Paper_LineageA_FinalCancerPaper",
+          "cat:type": "NewPaper",
+          "schema:name": "Lineage A Final: Targeted Anti-Tumor Nano-Crystals (Cancer Cell 2024)",
+          "schema:datePublished": "2024",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0001-1111-AAAA"
+            }
+          ],
+          "schema:hasPart": [
+            {
+              "@id": "Material_LineageA_LiposomalProdrug"
+            },
+            {
+              "@id": "Data_Shared_CrystalStructure_DOI"
+            }
+          ],
+          "prov:wasDerivedFrom": [
+            {
+              "@id": "Paper_LineageA_InitialBioStudy"
+            }
+          ]
+        },
+        {
+          "@id": "Paper_LineageB_FinalSemiconductorPaper",
+          "cat:type": "NewPaper",
+          "schema:name": "Lineage B Final: High-Reliability Piezoelectric Resonators (Nature Electronics 2024)",
+          "schema:datePublished": "2024",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-2222-BBBB"
+            }
+          ],
+          "schema:hasPart": [
+            {
+              "@id": "LimitEntry_ThermalShockThreshold"
+            },
+            {
+              "@id": "Data_LineageB_DielectricPermittivity"
+            },
+            {
+              "@id": "Data_Shared_CrystalStructure_DOI"
+            }
+          ],
+          "prov:wasDerivedFrom": [
+            {
+              "@id": "Paper_LineageB_InitialDeviceStudy"
+            }
+          ]
+        }
+      ],
+      "higher_functors": [
+        {
+          "from": "Material_LineageA_LiposomalProdrug@t10",
+          "to": "Paper_LineageA_FinalCancerPaper@t20",
+          "transform": "ColimitSynthesize",
+          "functor": "ColimitProjection"
+        },
+        {
+          "from": "Data_Shared_CrystalStructure_DOI@t10",
+          "to": "Paper_LineageA_FinalCancerPaper@t20",
+          "transform": "StructuralBasis",
+          "functor": "KanExtension"
+        },
+        {
+          "from": "LimitEntry_ThermalShockThreshold@t10",
+          "to": "Paper_LineageB_FinalSemiconductorPaper@t20",
+          "transform": "StrainEngineeredSynthesis",
+          "functor": "ColimitProjection"
+        },
+        {
+          "from": "Data_LineageB_DielectricPermittivity@t10",
+          "to": "Paper_LineageB_FinalSemiconductorPaper@t20",
+          "transform": "IntegratePermittivity",
+          "functor": "ColimitProjection"
+        },
+        {
+          "from": "Data_Shared_CrystalStructure_DOI@t10",
+          "to": "Paper_LineageB_FinalSemiconductorPaper@t20",
+          "transform": "LatticeGrounding",
+          "functor": "KanExtension"
+        }
+      ]
+    }
+  ]
+}

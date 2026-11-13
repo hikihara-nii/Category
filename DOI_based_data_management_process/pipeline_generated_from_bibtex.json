@@ -1,0 +1,237 @@
+{
+  "metadata": {
+    "title": "Data-Centric Provenance & Categorical Lineage Pipeline",
+    "description": "BibTeXから自動生成された動的メタデータパイプライン"
+  },
+  "snapshots": [
+    {
+      "version": 0,
+      "description": "t=0 [1965] 初期実験: 伸長測定データ、電極腐食失敗ログ、論文",
+      "@graph": [
+        {
+          "@id": "orcid:0000-0002-1825-0097",
+          "cat:type": "Researcher",
+          "schema:name": "Rosenberg, Barnett (ORCID: 0000-0002-1825-0097)",
+          "@type": "prov:Agent",
+          "orcid:id": "0000-0002-1825-0097"
+        },
+        {
+          "@id": "orcid:0000-0001-5109-3700",
+          "cat:type": "Researcher",
+          "schema:name": "Van Camp, Loretta (ORCID: 0000-0001-5109-3700)",
+          "@type": "prov:Agent",
+          "orcid:id": "0000-0001-5109-3700"
+        },
+        {
+          "@id": "Data_CellFilamentation_DOI",
+          "cat:type": "Data",
+          "schema:name": "E. coli Filamentation Assay Raw Microscopy Images and Cell Length Dataset (1965)",
+          "schema:datePublished": "1965",
+          "schema:identifier": "https://doi.org/10.5281/zenodo.1234567",
+          "datacite:doi": "10.5281/zenodo.1234567",
+          "schema:publisher": "Zenodo",
+          "sio:has-value": "300x length without division",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-1825-0097"
+            },
+            {
+              "@id": "orcid:0000-0001-5109-3700"
+            }
+          ]
+        },
+        {
+          "@id": "Exp_Fail_ElectrodeCorrosion_DOI",
+          "cat:type": "FailedData",
+          "schema:name": "Platinum Electrode Corrosion & Soluble Byproduct Anomaly Log (1965)",
+          "schema:datePublished": "1965",
+          "schema:identifier": "https://doi.org/10.5281/zenodo.7654321",
+          "datacite:doi": "10.5281/zenodo.7654321",
+          "schema:publisher": "Zenodo (Negative Results Archive)",
+          "cat:failureReason": "Inert Pt electrode corroded in NH4Cl broth; formed soluble inorganic byproduct",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-1825-0097"
+            }
+          ]
+        },
+        {
+          "@id": "orcid:0000-0003-1234-5678",
+          "cat:type": "Researcher",
+          "schema:name": "Krigas, Thomas (ORCID: 0000-0003-1234-5678)",
+          "@type": "prov:Agent",
+          "orcid:id": "0000-0003-1234-5678"
+        },
+        {
+          "@id": "Nature_1965_Rosenberg",
+          "cat:type": "Paper",
+          "schema:name": "Inhibition of Cell Division in Escherichia coli by Electrolysis (1965)",
+          "schema:datePublished": "1965",
+          "schema:identifier": "https://doi.org/10.1038/205698a0",
+          "datacite:doi": "10.1038/205698a0",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-1825-0097"
+            },
+            {
+              "@id": "orcid:0000-0001-5109-3700"
+            },
+            {
+              "@id": "orcid:0000-0003-1234-5678"
+            }
+          ],
+          "schema:hasPart": [
+            {
+              "@id": "Data_CellFilamentation_DOI"
+            },
+            {
+              "@id": "Exp_Fail_ElectrodeCorrosion_DOI"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "version": 10,
+      "description": "t=10 [1967] 観点転換: 腐食失敗から阻害活性IC50への再解釈データ、合成新材料",
+      "@graph": [
+        {
+          "@id": "Data_PtCytotoxicity_Threshold_DOI",
+          "cat:type": "ThermalLimit",
+          "schema:name": "Pt Complex Anti-Mitotic Activity Curve & IC50 Threshold Dataset (1967)",
+          "schema:datePublished": "1967",
+          "schema:identifier": "https://doi.org/10.5281/zenodo.8888888",
+          "datacite:doi": "10.5281/zenodo.8888888",
+          "schema:publisher": "Zenodo",
+          "sio:has-value": "IC50 = 2.5 ug/mL",
+          "cat:reinterpretationNote": "Re-evaluated corrosion byproduct as potent chemical inhibitor of chromosomal division",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-1825-0097"
+            }
+          ],
+          "prov:wasDerivedFrom": [
+            {
+              "@id": "Exp_Fail_ElectrodeCorrosion_DOI"
+            }
+          ]
+        },
+        {
+          "@id": "Material_Synthesized_Cisplatin",
+          "cat:type": "NewMaterial",
+          "schema:name": "cis-diamminedichloroplatinum(II) [Pure Synthetic Specimen] (1967)",
+          "schema:datePublished": "1967",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-1825-0097"
+            }
+          ]
+        }
+      ],
+      "perspective_shifts": [
+        {
+          "source_id": "Exp_Fail_ElectrodeCorrosion_DOI",
+          "new_id": "Data_PtCytotoxicity_Threshold_DOI",
+          "new_type": "ThermalLimit",
+          "name": "Pt Complex Anti-Mitotic Activity (IC50 = 2.5 ug/mL)"
+        }
+      ]
+    },
+    {
+      "version": 20,
+      "description": "t=20 [1969] 余極限合成: 動物試験データと再解釈データ統合による新論文創出",
+      "@graph": [
+        {
+          "@id": "Data_Sarcoma180_TumorRegression_DOI",
+          "cat:type": "Data",
+          "schema:name": "In Vivo Sarcoma 180 Complete Tumor Regression Curve (1969)",
+          "schema:datePublished": "1969",
+          "schema:identifier": "https://doi.org/10.5281/zenodo.9999999",
+          "datacite:doi": "10.5281/zenodo.9999999",
+          "schema:publisher": "Zenodo",
+          "sio:has-value": "100",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-1825-0097"
+            },
+            {
+              "@id": "orcid:0000-0001-5109-3700"
+            }
+          ]
+        },
+        {
+          "@id": "orcid:0000-0002-9999-1111",
+          "cat:type": "Researcher",
+          "schema:name": "Trosko, James E. (ORCID: 0000-0002-9999-1111)",
+          "@type": "prov:Agent",
+          "orcid:id": "0000-0002-9999-1111"
+        },
+        {
+          "@id": "orcid:0000-0002-8888-2222",
+          "cat:type": "Researcher",
+          "schema:name": "Mansour, Virginia H. (ORCID: 0000-0002-8888-2222)",
+          "@type": "prov:Agent",
+          "orcid:id": "0000-0002-8888-2222"
+        },
+        {
+          "@id": "Nature_1969_Rosenberg",
+          "cat:type": "NewPaper",
+          "schema:name": "Platinum Compounds: a New Class of Potent Antitumour Agents (1969)",
+          "schema:datePublished": "1969",
+          "schema:identifier": "https://doi.org/10.1038/222385a0",
+          "datacite:doi": "10.1038/222385a0",
+          "prov:wasAttributedTo": [
+            {
+              "@id": "orcid:0000-0002-1825-0097"
+            },
+            {
+              "@id": "orcid:0000-0001-5109-3700"
+            },
+            {
+              "@id": "orcid:0000-0002-9999-1111"
+            },
+            {
+              "@id": "orcid:0000-0002-8888-2222"
+            }
+          ],
+          "schema:hasPart": [
+            {
+              "@id": "Data_PtCytotoxicity_Threshold_DOI"
+            },
+            {
+              "@id": "Material_Synthesized_Cisplatin"
+            },
+            {
+              "@id": "Data_Sarcoma180_TumorRegression_DOI"
+            }
+          ],
+          "prov:wasDerivedFrom": [
+            {
+              "@id": "Nature_1965_Rosenberg"
+            }
+          ]
+        }
+      ],
+      "higher_functors": [
+        {
+          "from": "Nature_1965_Rosenberg@t0",
+          "to": "Nature_1969_Rosenberg@t20",
+          "transform": "EvolvesFrom",
+          "functor": "Lineage"
+        },
+        {
+          "from": "Data_PtCytotoxicity_Threshold_DOI@t10",
+          "to": "Nature_1969_Rosenberg@t20",
+          "transform": "Synthesize",
+          "functor": "ColimitProjection"
+        },
+        {
+          "from": "Material_Synthesized_Cisplatin@t10",
+          "to": "Nature_1969_Rosenberg@t20",
+          "transform": "IntegrateNew",
+          "functor": "Pushout"
+        }
+      ]
+    }
+  ]
+}

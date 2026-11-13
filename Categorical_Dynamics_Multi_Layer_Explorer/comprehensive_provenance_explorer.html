@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>Comprehensive Provenance & Metadata Lineage Explorer (t=0 -> t=40)</title>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    :root {
+      --bg: #07090e;
+      --panel: #111827;
+      --border: #1f2937;
+      --cyan: #38bdf8;
+      --magenta: #f43f5e;
+      --orange: #fb923c;
+      --purple: #a855f7;
+      --green: #22c55e;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #0f172a;
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      height: 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    h1 { font-size: 14px; font-weight: 700; color: var(--cyan); display: flex; align-items: center; gap: 8px; }
+    .badge { background: #0284c7; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+    
+    .selector-bar { display: flex; align-items: center; gap: 10px; }
+    .selector-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #1e293b;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+    }
+    select {
+      background: #0b0f17;
+      color: #fff;
+      border: 1px solid #4b5563;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      max-width: 240px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 5px 11px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button:hover { background: #1d4ed8; filter: brightness(1.1); }
+    button.btn-danger { background: #b91c1c; }
+    button.btn-danger:hover { background: #dc2626; }
+    button.btn-cyan { background: #0284c7; }
+    button.btn-cyan:hover { background: #0369a1; }
+    button.btn-secondary { background: #374151; }
+    button.btn-secondary:hover { background: #4b5563; }
+
+    .main-stage {
+      flex: 1;
+      display: flex;
+      height: calc(100vh - 50px);
+      position: relative;
+    }
+    .canvas-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .timeline-guides {
+      height: 30px;
+      background: rgba(17, 24, 39, 0.8);
+      border-bottom: 1px dashed var(--border);
+      display: flex;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      z-index: 10;
+    }
+    .col-header {
+      width: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px dashed var(--border);
+    }
+    #network-canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+    }
+
+    .legend-box {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(17, 24, 39, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 10px;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+      z-index: 20;
+    }
+    .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .dot { width: 9px; height: 9px; border-radius: 2px; }
+
+    /* 右側サイドバー: 遡及追跡ツリー & JSON-LD */
+    .sidebar {
+      width: 440px;
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 30;
+    }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: #0b0f17; }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 6px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .tab-btn.active { color: #fff; border-bottom-color: var(--cyan); background: var(--panel); font-weight: 600; }
+    .tab-content { flex: 1; overflow-y: auto; padding: 14px; display: none; flex-direction: column; gap: 12px; }
+    .tab-content.active { display: flex; }
+
+    .card {
+      background: #0b0f17;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 11px;
+    }
+    .card h3 {
+      font-size: 12px;
+      margin-bottom: 8px;
+      color: var(--cyan);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tree-group { margin-bottom: 10px; }
+    .tree-stage-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--orange);
+      border-bottom: 1px solid #1f2937;
+      padding-bottom: 3px;
+      margin-bottom: 4px;
+    }
+    .tree-item {
+      padding: 5px 8px;
+      margin-bottom: 3px;
+      border-left: 3px solid var(--cyan);
+      background: rgba(56, 189, 248, 0.05);
+      border-radius: 0 4px 4px 0;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tree-item:hover { background: rgba(56, 189, 248, 0.15); }
+    .tree-item.failed {
+      border-left-color: var(--magenta);
+      background: rgba(244, 63, 94, 0.08);
+    }
+    .tree-item.failed:hover { background: rgba(244, 63, 94, 0.2); }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      background: #05070c;
+      color: #38bdf8;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 10px;
+      padding: 10px;
+      resize: vertical;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <h1>Comprehensive Provenance Explorer <span class="badge">t=0 -> t=40</span></h1>
+      
+      <button class="btn-cyan" onclick="traceFinalTarget('Paper_2026_AdvancedTherapeutics@t40')">
+        ★ 最新論文 (Adv Ther 2026) から全ルーツ遡及
+      </button>
+
+      <button class="btn-secondary" onclick="traceFinalTarget('Nature_1999_Lippard@t30')">
+        1999年 構造論文から遡及
+      </button>
+
+      <button class="btn-secondary" onclick="traceFinalTarget('Nature_1969_Rosenberg@t20')">
+        1969年 抗がん剤論文から遡及
+      </button>
+    </div>
+
+    <div class="selector-bar">
+      <div class="selector-box">
+        <label style="color:#9ca3af;">🎯 任意ノード:</label>
+        <select id="node-selector" onchange="onSelectNodeChange(this.value)">
+          <option value="">-- ノードを選択して探索 --</option>
+        </select>
+      </div>
+
+      <button class="btn-danger" onclick="resetAll()">⟲ リセット</button>
+      <button class="btn-secondary" onclick="resetView()">視点センタリング</button>
+    </div>
+  </header>
+
+  <div class="main-stage">
+    <div class="canvas-container">
+      <div class="timeline-guides">
+        <div class="col-header">[t=0] 1965年 初期実験・電極腐食失敗</div>
+        <div class="col-header">[t=10] 観点転換・分光分析・シスプラチン</div>
+        <div class="col-header">[t=20] 1969年 抗腫瘍試験・毒性限界・Nature</div>
+        <div class="col-header">[t=30] 1999年 X線DNA付加体構造解明</div>
+        <div class="col-header">[t=40] 2026年 次世代ナノキャリア最新論文</div>
+      </div>
+
+      <div id="network-canvas"></div>
+
+      <div class="legend-box">
+        <div style="font-weight:700; margin-bottom:6px; color:#fff;">圏論・プロバナンス凡例</div>
+        <div class="legend-row"><div class="dot" style="background:#7e22ce;"></div>最終・合成新論文 (NewPaper)</div>
+        <div class="legend-row"><div class="dot" style="background:#1d4ed8;"></div>初期論文 (Paper)</div>
+        <div class="legend-row"><div class="dot" style="background:#0891b2;"></div>測定データ群 (Data)</div>
+        <div class="legend-row"><div class="dot" style="background:#b91c1c;"></div>失敗/アノマリー (FailedData)</div>
+        <div class="legend-row"><div class="dot" style="background:#be185d;"></div>観点転換限界値 (ThermalLimit)</div>
+        <div class="legend-row"><div class="dot" style="background:#c2410c;"></div>新材料標本 (NewMaterial)</div>
+        <div class="legend-row"><div class="dot" style="background:#15803d;"></div>供試材料 (Material)</div>
+        <div class="legend-row"><div class="dot" style="background:#4b5563;"></div>先行文献 (Reference)</div>
+        <hr style="margin:4px 0; border:0; border-top:1px solid #374151;">
+        <div style="color:#fb923c; font-weight:bold;">― 太線オレンジ: 関手射 (Inter-fiber)</div>
+        <div style="color:#9ca3af;">┄ 破線グレー: 同一時間構造 (Intra-fiber)</div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-trace')">完全ルーツ遡及ツリー</button>
+        <button class="tab-btn" onclick="switchTab('tab-json')">PROV-O / JSON-LD</button>
+      </div>
+
+      <div id="tab-trace" class="tab-content active">
+        <div class="card">
+          <h3>探索対象ノード <span id="selected-badge" style="color:var(--cyan); font-size:10px;"></span></h3>
+          <div id="target-details" style="color:var(--text-muted); line-height:1.4;">
+            上のボタン（最新論文から全ルーツ遡及）を押すか、ノードをクリックしてください。
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>過去遡及ルーツ (Backward Provenance) <span id="ancestor-count" style="color:var(--cyan);">0 件</span></h3>
+          <div id="tree-container">
+            <p style="color:var(--text-muted); font-size:10px;">この論文が依存する全過去データ・失敗ログ・中間論文が世代順にリストアップされます。</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>将来波及影響 (Forward Impact) <span id="descendant-count" style="color:var(--magenta);">0 件</span></h3>
+          <ul id="descendant-list" style="list-style:none; max-height:130px; overflow-y:auto;"></ul>
+        </div>
+      </div>
+
+      <div id="tab-json" class="tab-content">
+        <div class="card">
+          <h3>W3C PROV-O / SIO 準拠 JSON-LD</h3>
+          <textarea id="json-box" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rawNodes = [{"id": "Nature_1965_Rosenberg@t0", "rawId": "Nature_1965_Rosenberg", "type": "Paper", "version": 0, "label": "Inhibition of Cell Division in E. coli by Electrolysis (Nature 1965)\n[t=0]", "title": "Inhibition of Cell Division in E. coli by Electrolysis (Nature 1965)", "color": {"background": "#1d4ed8", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 80, "y": 90, "fixed": {"x": true, "y": false}}, {"id": "Data_CellFilamentation@t0", "rawId": "Data_CellFilamentation", "type": "Data", "version": 0, "label": "E. coli Filamentation Assay (300x elongation)\n[t=0]", "title": "E. coli Filamentation Assay (300x elongation) (Value: 300x length without division)", "color": {"background": "#0891b2", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 80, "y": 320, "fixed": {"x": true, "y": false}}, {"id": "Data_ElectricFieldGradient@t0", "rawId": "Data_ElectricFieldGradient", "type": "Data", "version": 0, "label": "Electric Field Voltage-Current Response (50-200 V/cm)\n[t=0]", "title": "Electric Field Voltage-Current Response (50-200 V/cm) (Value: 120 V/cm continuous)", "color": {"background": "#0891b2", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 80, "y": 390, "fixed": {"x": true, "y": false}}, {"id": "Material_EColi_B@t0", "rawId": "Material_EColi_B", "type": "Material", "version": 0, "label": "E. coli Strain B Culture Lot #01 (NH4Cl medium)\n[t=0]", "title": "E. coli Strain B Culture Lot #01 (NH4Cl medium)", "color": {"background": "#15803d", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 80, "y": 560, "fixed": {"x": true, "y": false}}, {"id": "Exp_Fail_ElectrodeCorrosion@t0", "rawId": "Exp_Fail_ElectrodeCorrosion", "type": "FailedData", "version": 0, "label": "Unexpected Pt Electrode Corrosion (Unknown Contaminant)\n[t=0]", "title": "Unexpected Pt Electrode Corrosion (Unknown Contaminant) [Failure: Inert Pt electrode corroded in NH4Cl broth; formed soluble inorganic byproduct]", "color": {"background": "#b91c1c", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 80, "y": 750, "fixed": {"x": true, "y": false}}, {"id": "Exp_Fail_LowPHPrecipitate@t0", "rawId": "Exp_Fail_LowPHPrecipitate", "type": "FailedData", "version": 0, "label": "Low pH Decomposition Precipitate Log\n[t=0]", "title": "Low pH Decomposition Precipitate Log [Failure: Substance hydrolyzed and formed inactive black precipitate under acidic pH < 4.5]", "color": {"background": "#b91c1c", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 80, "y": 820, "fixed": {"x": true, "y": false}}, {"id": "Ref_Smith_1958@t0", "rawId": "Ref_Smith_1958", "type": "Reference", "version": 0, "label": "Smith et al. (1958) Physical Effects of Direct Currents on Bacteria\n[t=0]", "title": "Smith et al. (1958) Physical Effects of Direct Currents on Bacteria", "color": {"background": "#4b5563", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 80, "y": 210, "fixed": {"x": true, "y": false}}, {"id": "Ref_Phillips_1960@t0", "rawId": "Ref_Phillips_1960", "type": "Reference", "version": 0, "label": "Phillips (1960) Coordination Chemistry of Platinum Group Metals\n[t=0]", "title": "Phillips (1960) Coordination Chemistry of Platinum Group Metals", "color": {"background": "#4b5563", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 80, "y": 280, "fixed": {"x": true, "y": false}}, {"id": "LimitEntry_PtCytotoxicity@t10", "rawId": "LimitEntry_PtCytotoxicity", "type": "ThermalLimit", "version": 10, "label": "Pt Complex Cell-Division Arrest Activity (IC50 = 2.5 ug/mL)\n[t=10]", "title": "Pt Complex Cell-Division Arrest Activity (IC50 = 2.5 ug/mL) (Reinterpreted from Exp_Fail_ElectrodeCorrosion)", "color": {"background": "#be185d", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 400, "y": 440, "fixed": {"x": true, "y": false}}, {"id": "LimitEntry_HydrolysisKinetics@t10", "rawId": "LimitEntry_HydrolysisKinetics", "type": "ThermalLimit", "version": 10, "label": "Aqueous Hydrolysis Rate & pH Stability Boundary\n[t=10]", "title": "Aqueous Hydrolysis Rate & pH Stability Boundary (Reinterpreted from Exp_Fail_LowPHPrecipitate)", "color": {"background": "#be185d", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 400, "y": 510, "fixed": {"x": true, "y": false}}, {"id": "Data_Spectroscopy_NMR_IR@t10", "rawId": "Data_Spectroscopy_NMR_IR", "type": "Data", "version": 10, "label": "IR & NMR Spectroscopy Coordination Structural Data\n[t=10]", "title": "IR & NMR Spectroscopy Coordination Structural Data (Value: Cis-geometry identified (cis-Pt(NH3)2Cl2))", "color": {"background": "#0891b2", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 400, "y": 320, "fixed": {"x": true, "y": false}}, {"id": "Material_Synthesized_Cisplatin@t10", "rawId": "Material_Synthesized_Cisplatin", "type": "NewMaterial", "version": 10, "label": "cis-diamminedichloroplatinum(II) [Pure Synthetic Specimen]\n[t=10]", "title": "cis-diamminedichloroplatinum(II) [Pure Synthetic Specimen]", "color": {"background": "#c2410c", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 400, "y": 650, "fixed": {"x": true, "y": false}}, {"id": "Nature_1969_Rosenberg@t20", "rawId": "Nature_1969_Rosenberg", "type": "NewPaper", "version": 20, "label": "Platinum Compounds: a New Class of Potent Antitumour Agents (Nature 1969)\n[t=20]", "title": "Platinum Compounds: a New Class of Potent Antitumour Agents (Nature 1969)", "color": {"background": "#7e22ce", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 720, "y": 50, "fixed": {"x": true, "y": false}}, {"id": "Data_Sarcoma180_TumorRegression@t20", "rawId": "Data_Sarcoma180_TumorRegression", "type": "Data", "version": 20, "label": "In Vivo Sarcoma 180 Complete Tumor Regression Curve\n[t=20]", "title": "In Vivo Sarcoma 180 Complete Tumor Regression Curve (Value: 100% cure rate at 8 mg/kg)", "color": {"background": "#0891b2", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 720, "y": 320, "fixed": {"x": true, "y": false}}, {"id": "LimitEntry_NephrotoxicityThreshold@t20", "rawId": "LimitEntry_NephrotoxicityThreshold", "type": "ThermalLimit", "version": 20, "label": "Nephrotoxicity Dose Boundary (BUN/Creatinine Threshold)\n[t=20]", "title": "Nephrotoxicity Dose Boundary (BUN/Creatinine Threshold) (Value: Max tolerable single dose 12 mg/kg)", "color": {"background": "#be185d", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 720, "y": 440, "fixed": {"x": true, "y": false}}, {"id": "Material_Synthesized_Cisplatin@t20", "rawId": "Material_Synthesized_Cisplatin", "type": "Entity", "version": 20, "label": "Material_Synthesized_Cisplatin\n[t=20]", "title": "Material_Synthesized_Cisplatin", "color": {"background": "#334155", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 720, "y": 850, "fixed": {"x": true, "y": false}}, {"id": "Nature_1965_Rosenberg@t20", "rawId": "Nature_1965_Rosenberg", "type": "Entity", "version": 20, "label": "Nature_1965_Rosenberg\n[t=20]", "title": "Nature_1965_Rosenberg", "color": {"background": "#334155", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 720, "y": 920, "fixed": {"x": true, "y": false}}, {"id": "Nature_1999_Lippard@t30", "rawId": "Nature_1999_Lippard", "type": "NewPaper", "version": 30, "label": "Crystal Structure of Major DNA Adduct of Cisplatin (Nature 1999)\n[t=30]", "title": "Crystal Structure of Major DNA Adduct of Cisplatin (Nature 1999)", "color": {"background": "#7e22ce", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 1040, "y": 50, "fixed": {"x": true, "y": false}}, {"id": "Data_XrayCrystallography_PDB@t30", "rawId": "Data_XrayCrystallography_PDB", "type": "Data", "version": 30, "label": "1.9A X-ray Crystallography Coordinate Dataset (PDB: 1AIO)\n[t=30]", "title": "1.9A X-ray Crystallography Coordinate Dataset (PDB: 1AIO) (Value: 45-degree DNA bending angle)", "color": {"background": "#0891b2", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 1040, "y": 320, "fixed": {"x": true, "y": false}}, {"id": "Material_DuplexDNA_Adduct@t30", "rawId": "Material_DuplexDNA_Adduct", "type": "Material", "version": 30, "label": "Self-complementary 16-base-pair Duplex DNA Complex\n[t=30]", "title": "Self-complementary 16-base-pair Duplex DNA Complex", "color": {"background": "#15803d", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 1040, "y": 560, "fixed": {"x": true, "y": false}}, {"id": "Nature_1969_Rosenberg@t30", "rawId": "Nature_1969_Rosenberg", "type": "Entity", "version": 30, "label": "Nature_1969_Rosenberg\n[t=30]", "title": "Nature_1969_Rosenberg", "color": {"background": "#334155", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 1040, "y": 850, "fixed": {"x": true, "y": false}}, {"id": "Paper_2026_AdvancedTherapeutics@t40", "rawId": "Paper_2026_AdvancedTherapeutics", "type": "NewPaper", "version": 40, "label": "Targeted Pt(IV) Polymer Nanocarriers Overcoming Multi-Drug Resistance (Adv Ther 2026)\n[t=40]", "title": "Targeted Pt(IV) Polymer Nanocarriers Overcoming Multi-Drug Resistance (Adv Ther 2026)", "color": {"background": "#7e22ce", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 1360, "y": 50, "fixed": {"x": true, "y": false}}, {"id": "Data_NanoparticleTargeting_PK@t40", "rawId": "Data_NanoparticleTargeting_PK", "type": "Data", "version": 40, "label": "Tumor Accumulation Pharmacokinetics & Zero Renal Toxicity Curve\n[t=40]", "title": "Tumor Accumulation Pharmacokinetics & Zero Renal Toxicity Curve (Value: 15x tumor uptake, 0% acute kidney injury)", "color": {"background": "#0891b2", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 1360, "y": 320, "fixed": {"x": true, "y": false}}, {"id": "Material_PtIV_PEG_Nanoparticle@t40", "rawId": "Material_PtIV_PEG_Nanoparticle", "type": "NewMaterial", "version": 40, "label": "pH-Responsive Pt(IV) Prodrug PEG-PLGA Nanoparticles\n[t=40]", "title": "pH-Responsive Pt(IV) Prodrug PEG-PLGA Nanoparticles", "color": {"background": "#c2410c", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 1360, "y": 650, "fixed": {"x": true, "y": false}}, {"id": "Nature_1999_Lippard@t40", "rawId": "Nature_1999_Lippard", "type": "Entity", "version": 40, "label": "Nature_1999_Lippard\n[t=40]", "title": "Nature_1999_Lippard", "color": {"background": "#334155", "border": "#ffffff"}, "font": {"color": "#ffffff", "size": 10, "face": "Segoe UI, sans-serif"}, "shape": "box", "margin": 8, "x": 1360, "y": 850, "fixed": {"x": true, "y": false}}];
+    const rawEdges = [{"id": "e_0", "from": "Nature_1965_Rosenberg@t0", "to": "Data_CellFilamentation@t0", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_1", "from": "Nature_1965_Rosenberg@t0", "to": "Data_ElectricFieldGradient@t0", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_2", "from": "Nature_1965_Rosenberg@t0", "to": "Material_EColi_B@t0", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_3", "from": "Nature_1965_Rosenberg@t0", "to": "Exp_Fail_ElectrodeCorrosion@t0", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_4", "from": "Nature_1965_Rosenberg@t0", "to": "Exp_Fail_LowPHPrecipitate@t0", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_5", "from": "Nature_1965_Rosenberg@t0", "to": "Ref_Smith_1958@t0", "label": "schema:citation", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_6", "from": "Nature_1965_Rosenberg@t0", "to": "Ref_Phillips_1960@t0", "label": "schema:citation", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_7", "from": "Nature_1965_Rosenberg@t0", "to": "Nature_1969_Rosenberg@t20", "label": "EvolvesFrom", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_8", "from": "Exp_Fail_ElectrodeCorrosion@t0", "to": "LimitEntry_PtCytotoxicity@t10", "label": "PerspectiveShift", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_9", "from": "Exp_Fail_LowPHPrecipitate@t0", "to": "LimitEntry_HydrolysisKinetics@t10", "label": "PerspectiveShift", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_10", "from": "Ref_Phillips_1960@t0", "to": "Data_Spectroscopy_NMR_IR@t10", "label": "GuidedByTheory", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_11", "from": "LimitEntry_PtCytotoxicity@t10", "to": "Nature_1969_Rosenberg@t20", "label": "Synthesize", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_12", "from": "LimitEntry_HydrolysisKinetics@t10", "to": "LimitEntry_NephrotoxicityThreshold@t20", "label": "MechanisticProgression", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_13", "from": "Material_Synthesized_Cisplatin@t10", "to": "Nature_1969_Rosenberg@t20", "label": "IntegrateNew", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_14", "from": "Material_Synthesized_Cisplatin@t10", "to": "Material_DuplexDNA_Adduct@t30", "label": "ComplexFormation", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_15", "from": "Nature_1969_Rosenberg@t20", "to": "Data_Sarcoma180_TumorRegression@t20", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_16", "from": "Nature_1969_Rosenberg@t20", "to": "LimitEntry_NephrotoxicityThreshold@t20", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_17", "from": "Nature_1969_Rosenberg@t20", "to": "Material_Synthesized_Cisplatin@t20", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_18", "from": "Nature_1969_Rosenberg@t20", "to": "Nature_1965_Rosenberg@t20", "label": "prov:wasDerivedFrom", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_19", "from": "Nature_1969_Rosenberg@t20", "to": "Nature_1999_Lippard@t30", "label": "StructuralElucidation", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_20", "from": "LimitEntry_NephrotoxicityThreshold@t20", "to": "Data_NanoparticleTargeting_PK@t40", "label": "OvercomingToxicityBoundary", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_21", "from": "Nature_1999_Lippard@t30", "to": "Data_XrayCrystallography_PDB@t30", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_22", "from": "Nature_1999_Lippard@t30", "to": "Material_DuplexDNA_Adduct@t30", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_23", "from": "Nature_1999_Lippard@t30", "to": "Nature_1969_Rosenberg@t30", "label": "prov:wasDerivedFrom", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_24", "from": "Nature_1999_Lippard@t30", "to": "Paper_2026_AdvancedTherapeutics@t40", "label": "MechanismInformedDesign", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_25", "from": "Data_XrayCrystallography_PDB@t30", "to": "Paper_2026_AdvancedTherapeutics@t40", "label": "StructureBasedDrugDesign", "edge_type": "inter", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#fb923c", "highlight": "#38bdf8"}, "width": 2.5, "dashes": false, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_26", "from": "Paper_2026_AdvancedTherapeutics@t40", "to": "Data_NanoparticleTargeting_PK@t40", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_27", "from": "Paper_2026_AdvancedTherapeutics@t40", "to": "Material_PtIV_PEG_Nanoparticle@t40", "label": "schema:hasPart", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}, {"id": "e_28", "from": "Paper_2026_AdvancedTherapeutics@t40", "to": "Nature_1999_Lippard@t40", "label": "prov:wasDerivedFrom", "edge_type": "intra", "arrows": "to", "font": {"size": 8, "color": "#94a3b8", "strokeWidth": 2, "strokeColor": "#0b0f17", "align": "middle"}, "color": {"color": "#475569", "highlight": "#38bdf8"}, "width": 1.2, "dashes": true, "smooth": {"type": "cubicBezier", "forceDirection": "horizontal", "roundness": 0.35}}];
+    const typeColors = {"Paper": "#1d4ed8", "NewPaper": "#7e22ce", "Data": "#0891b2", "FailedData": "#b91c1c", "ThermalLimit": "#be185d", "Material": "#15803d", "NewMaterial": "#c2410c", "Reference": "#4b5563", "Entity": "#334155"};
+
+    const nodesDataset = new vis.DataSet(rawNodes);
+    const edgesDataset = new vis.DataSet(rawEdges);
+    const container = document.getElementById('network-canvas');
+    const data = { nodes: nodesDataset, edges: edgesDataset };
+
+    const options = {
+      physics: { enabled: false },
+      interaction: {
+        hover: true,
+        dragNodes: true,
+        zoomView: true,
+        dragView: true
+      }
+    };
+
+    const network = new vis.Network(container, data, options);
+
+    network.on("click", function(params) {
+      if (params.nodes.length > 0) {
+        selectNode(params.nodes[0]);
+      } else {
+        clearSelection();
+      }
+    });
+
+    function findAncestors(targetId) {
+      const visited = new Set();
+      const queue = [targetId];
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        rawEdges.filter(e => e.to === curr).forEach(e => {
+          if (!visited.has(e.from)) {
+            visited.add(e.from);
+            queue.push(e.from);
+          }
+        });
+      }
+      return Array.from(visited).map(id => rawNodes.find(n => n.id === id)).filter(Boolean);
+    }
+
+    function findDescendants(sourceId) {
+      const visited = new Set();
+      const queue = [sourceId];
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        rawEdges.filter(e => e.from === curr).forEach(e => {
+          if (!visited.has(e.to)) {
+            visited.add(e.to);
+            queue.push(e.to);
+          }
+        });
+      }
+      return Array.from(visited).map(id => rawNodes.find(n => n.id === id)).filter(Boolean);
+    }
+
+    function selectNode(nodeId) {
+      document.getElementById("node-selector").value = nodeId;
+
+      const node = rawNodes.find(n => n.id === nodeId);
+      if (!node) return;
+
+      document.getElementById("selected-badge").innerText = `[${node.type} / t=${node.version}]`;
+      document.getElementById("target-details").innerHTML = `
+        <b style="color:#fff; font-size:12px;">${node.id}</b><br>
+        <span style="color:#38bdf8;">${node.title}</span>
+      `;
+
+      const ancestors = findAncestors(nodeId);
+      const descendants = findDescendants(nodeId);
+
+      document.getElementById("ancestor-count").innerText = `${ancestors.length} 件の起源`;
+      const treeContainer = document.getElementById("tree-container");
+      treeContainer.innerHTML = "";
+
+      if (ancestors.length === 0) {
+        treeContainer.innerHTML = "<p style='color:#6b7280; font-size:10px;'>祖先ノードなし (起点データ/論文)</p>";
+      } else {
+        const versionGroups = {};
+        ancestors.forEach(a => {
+          if (!versionGroups[a.version]) versionGroups[a.version] = [];
+          versionGroups[a.version].push(a);
+        });
+
+        const sortedVersions = Object.keys(versionGroups).map(Number).sort((a,b) => a - b);
+        
+        sortedVersions.forEach(v => {
+          const groupDiv = document.createElement("div");
+          groupDiv.className = "tree-group";
+          
+          let stageLabel = `時間層 t=${v}`;
+          if (v === 0) stageLabel += " (1965年 初期実験・腐食失敗)";
+          else if (v === 10) stageLabel += " (1967年 観点転換・分光分析)";
+          else if (v === 20) stageLabel += " (1969年 動物抗腫瘍試験・Nature)";
+          else if (v === 30) stageLabel += " (1999年 X線DNA構造論文)";
+
+          groupDiv.innerHTML = `<div class="tree-stage-title">${stageLabel} [${versionGroups[v].length}件]</div>`;
+          
+          versionGroups[v].forEach(item => {
+            const isFailed = (item.type === "FailedData");
+            const itemDiv = document.createElement("div");
+            itemDiv.className = `tree-item ${isFailed ? 'failed' : ''}`;
+            itemDiv.innerHTML = `
+              <div style="font-weight:600; color:${isFailed ? '#f43f5e' : '#38bdf8'}">${item.id}</div>
+              <div style="color:#9ca3af; font-size:9px;">${item.title}</div>
+            `;
+            itemDiv.onclick = () => selectNode(item.id);
+            groupDiv.appendChild(itemDiv);
+          });
+
+          treeContainer.appendChild(groupDiv);
+        });
+      }
+
+      document.getElementById("descendant-count").innerText = `${descendants.length} 件の派生成果`;
+      const descList = document.getElementById("descendant-list");
+      descList.innerHTML = "";
+      if (descendants.length === 0) {
+        descList.innerHTML = "<li style='color:#6b7280; font-size:10px; padding:4px;'>派生先なし (最先端成果)</li>";
+      } else {
+        descendants.sort((a,b) => a.version - b.version).forEach(d => {
+          const li = document.createElement("li");
+          li.style.cssText = "padding:4px 6px; margin-bottom:3px; border-left:3px solid #f43f5e; background:rgba(244,63,94,0.06); font-size:10px; cursor:pointer;";
+          li.innerHTML = `<b style="color:#f43f5e;">${d.id}</b> <span style="color:#9ca3af;">(t=${d.version} / ${d.type})</span>`;
+          li.onclick = () => selectNode(d.id);
+          descList.appendChild(li);
+        });
+      }
+
+      const ancIds = new Set(ancestors.map(a => a.id));
+      const descIds = new Set(descendants.map(d => d.id));
+
+      nodesDataset.forEach(n => {
+        if (n.id === nodeId) {
+          nodesDataset.update({ id: n.id, borderWidth: 4, color: { border: "#ffffff", background: "#f59e0b" } });
+        } else if (ancIds.has(n.id)) {
+          nodesDataset.update({ id: n.id, borderWidth: 3, color: { border: "#38bdf8", background: typeColors[n.type] || "#334155" } });
+        } else if (descIds.has(n.id)) {
+          nodesDataset.update({ id: n.id, borderWidth: 3, color: { border: "#f43f5e", background: typeColors[n.type] || "#334155" } });
+        } else {
+          nodesDataset.update({ id: n.id, borderWidth: 1, color: { border: "#1f2937", background: "#0f172a" } });
+        }
+      });
+
+      edgesDataset.forEach(e => {
+        const isAncEdge = ancIds.has(e.from) && (ancIds.has(e.to) || e.to === nodeId);
+        const isDescEdge = (e.from === nodeId && descIds.has(e.to)) || (descIds.has(e.from) && descIds.has(e.to));
+        
+        if (isAncEdge) {
+          edgesDataset.update({ id: e.id, color: { color: "#38bdf8" }, width: 3.5 });
+        } else if (isDescEdge) {
+          edgesDataset.update({ id: e.id, color: { color: "#f43f5e" }, width: 3.5 });
+        } else {
+          const isInter = (e.edge_type === "inter");
+          edgesDataset.update({ id: e.id, color: { color: isInter ? "#475569" : "#1f2937" }, width: 1 });
+        }
+      });
+
+      updateJsonView();
+      switchTab('tab-trace');
+    }
+
+    function traceFinalTarget(targetId) {
+      selectNode(targetId);
+      network.focus(targetId, {
+        scale: 0.85,
+        animation: { duration: 700, easingFunction: "easeInOutQuad" }
+      });
+    }
+
+    function onSelectNodeChange(val) {
+      if (val) selectNode(val);
+      else clearSelection();
+    }
+
+    function clearSelection() {
+      document.getElementById("node-selector").value = "";
+      document.getElementById("selected-badge").innerText = "";
+      document.getElementById("target-details").innerText = "ノードをクリックしてください。";
+      document.getElementById("tree-container").innerHTML = "<p style='color:#6b7280; font-size:10px;'>探索対象を選択してください。</p>";
+      document.getElementById("descendant-list").innerHTML = "";
+      document.getElementById("ancestor-count").innerText = "0 件";
+      document.getElementById("descendant-count").innerText = "0 件";
+
+      nodesDataset.forEach(n => {
+        const orig = rawNodes.find(o => o.id === n.id);
+        if (orig) {
+          nodesDataset.update({
+            id: n.id,
+            borderWidth: 1,
+            color: { border: "#ffffff", background: typeColors[orig.type] || "#334155" }
+          });
+        }
+      });
+
+      edgesDataset.forEach(e => {
+        const isInter = (e.edge_type === "inter");
+        edgesDataset.update({
+          id: e.id,
+          color: { color: isInter ? "#fb923c" : "#475569" },
+          width: isInter ? 2.5 : 1.2
+        });
+      });
+
+      updateJsonView();
+    }
+
+    function resetAll() {
+      clearSelection();
+      resetView();
+    }
+
+    function resetView() {
+      network.fit({ animation: { duration: 600, easingFunction: "easeInOutQuad" } });
+    }
+
+    function updateJsonView() {
+      const jsonLd = {
+        "@context": {
+          "schema": "http://schema.org/",
+          "prov": "http://www.w3.org/ns/prov#",
+          "sio": "http://semanticscience.org/resource/",
+          "cat": "http://example.org/category#"
+        },
+        "@graph": rawNodes.map(n => ({
+          "@id": n.rawId,
+          "@type": n.type,
+          "schema:name": n.title,
+          "cat:version": n.version,
+          "prov:wasDerivedFrom": rawEdges.filter(e => e.to === n.id).map(e => e.from)
+        }))
+      };
+      document.getElementById("json-box").value = JSON.stringify(jsonLd, null, 2);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (activeBtn) activeBtn.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    const selector = document.getElementById("node-selector");
+    rawNodes.forEach(n => {
+      selector.innerHTML += `<option value="${n.id}">${n.id} (${n.type} / t=${n.version})</option>`;
+    });
+
+    updateJsonView();
+    setTimeout(resetView, 300);
+  </script>
+</body>
+</html>
